@@ -22,8 +22,8 @@ export default defineConfig({
     },
   },
   server: {
-    // host: 'localhost', // Temporarily commented out
-    // port: 5173, // Temporarily commented out
-    // strictPort: true, // Temporarily commented out
+    host: true, // Listen on all addresses
+    port: 5173,
+    strictPort: true,
   },
 }); 

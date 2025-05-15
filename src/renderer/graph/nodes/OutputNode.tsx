@@ -20,6 +20,14 @@ export const OutputNode: React.FC<OutputNodeProps> = ({
   selected,
   onChange = () => {}
 }) => {
+  const handleLoopDurationChange = (duration: number) => {
+    onChange({ loopDuration: duration });
+    // Notify the particle system to update loop settings
+    if (window.particleSystem) {
+      window.particleSystem.enableLooping(duration);
+    }
+  };
+
   return (
     <BaseNode title="Output" color="#4d4d2d" data={data} selected={selected}>
       <SelectInput
@@ -43,11 +51,12 @@ export const OutputNode: React.FC<OutputNodeProps> = ({
         </label>
       </div>
       <NumberInput
-        label="Loop Duration"
+        label="Loop Duration (s)"
         value={data.loopDuration}
-        min={0}
+        min={0.25}
+        max={10}
         step={0.1}
-        onChange={(loopDuration) => onChange({ loopDuration })}
+        onChange={handleLoopDurationChange}
       />
     </BaseNode>
   );

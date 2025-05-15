@@ -1,19 +1,19 @@
-import React from 'react';
-import './App.css';
-import { TitleBar } from './components/TitleBar';
-import { PreviewWindow } from './components/PreviewWindow';
-import { NodeEditor } from './graph/NodeEditor';
-import { ErrorDisplay } from './components/ErrorDisplay';
-import { withComponentErrorLogging } from '../utils/errorLogger';
+import React, { useState } from 'react';
+import { HashRouter as Router, Route, Routes, Link } from 'react-router-dom';
 import './styles/app.css';
+import { TitleBar } from './components/TitleBar';
+import { NodeEditor } from './graph/NodeEditor';
+import { PreviewWindow } from './components/PreviewWindow';
+import { ErrorDisplay } from './components/ErrorDisplay';
+import { LoopTest } from '../examples/LoopTest';
 import './styles/nodes.css';
 
-const App: React.FC = () => {
-  const [nodeData, setNodeData] = React.useState<any>(null);
+const EditorPage: React.FC = () => {
+  const [nodeData, setNodeData] = useState({});
 
-  const handleNodeChange = withComponentErrorLogging((data: any) => {
+  const handleNodeChange = (data: any) => {
     setNodeData(data);
-  }, 'App');
+  };
 
   return (
     <div className="app">
@@ -29,6 +29,26 @@ const App: React.FC = () => {
       </div>
       <ErrorDisplay maxErrors={5} />
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<EditorPage />} />
+        <Route path="/loop-test" element={<LoopTest />} />
+      </Routes>
+      <div style={{
+        position: 'fixed',
+        bottom: 10,
+        right: 10,
+        zIndex: 1000
+      }}>
+        <Link to="/" style={{ marginRight: 10, color: '#fff' }}>Editor</Link>
+        <Link to="/loop-test" style={{ color: '#fff' }}>Loop Test</Link>
+      </div>
+    </Router>
   );
 };
 

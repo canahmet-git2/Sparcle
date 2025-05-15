@@ -83,11 +83,7 @@ export interface RendererNode extends NodeBase {
 }
 
 // Main particle system class
-export class ParticleNodeSystem {
-  private nodes: Map<string, NodeBase> = new Map();
-  private connections: Array<{ from: string; to: string; socket: string }> = [];
-  private time: number = 0;
-  private particles: Array<ParticleData> = [];
+import { ParticleLoopOptimizer } from '../loop';export class ParticleNodeSystem {  private nodes: Map<string, NodeBase> = new Map();  private connections: Array<{ from: string; to: string; socket: string }> = [];  private time: number = 0;  private particles: Array<ParticleData> = [];  private loopOptimizer: ParticleLoopOptimizer | null = null;
 
   constructor() {
     // Initialize with default nodes
@@ -149,8 +145,53 @@ export class ParticleNodeSystem {
     );
   }
 
+  public enableLooping(duration: number, frameRate: number = 60): void {
+    this.loopOptimizer = new ParticleLoopOptimizer({
+      duration,
+      frameRate,
+      tolerance: 0.001
+    });
+
+    // Pre-warm the system
+    this.loopOptimizer.preWarmSystem(duration * 2, (dt) => {
+      this.update(dt);
+      return this.particles.map(p => ({
+        position: p.position,
+        velocity: p.velocity,
+        acceleration: p.acceleration,
+        scale: p.scale,
+        rotation: p.rotation,
+        rotationSpeed: p.rotationSpeed,
+        color: p.color,
+        alpha: p.alpha,
+        life: p.life,
+        age: p.age
+      }));
+    });
+
+    // Sample and optimize transforms
+    this.loopOptimizer.sampleTransforms();
+    this.loopOptimizer.optimizeKeyframes();
+    this.loopOptimizer.enforceLoopContinuity();
+  }
+
+  public disableLooping(): void {
+    this.loopOptimizer = null;
+  }
+
   public update(deltaTime: number): void {
+    if (deltaTime < 0 || !isFinite(deltaTime)) {
+      console.warn('Invalid delta time:', deltaTime);
+      return;
+    }
+
     this.time += deltaTime;
+
+    // If looping is enabled, wrap time
+    if (this.loopOptimizer) {
+      const duration = this.loopOptimizer.getSettings().duration;
+      this.time = this.time % duration;
+    }
 
     // Update existing particles
     this.updateParticles(deltaTime);
@@ -175,6 +216,11 @@ export class ParticleNodeSystem {
         this.applyBehaviors(node as BehaviorNode);
       }
     });
+
+    // Apply loop optimization if enabled
+    if (this.loopOptimizer) {
+      this.applyLoopTransforms();
+    }
   }
 
   private updateParticles(deltaTime: number): void {
@@ -336,6 +382,57 @@ export class ParticleNodeSystem {
           // Add more behavior types as needed
         }
       });
+    });
+  }
+
+  private applyLoopTransforms(): void {
+    if (!this.loopOptimizer) return;
+
+    const keyframes = this.loopOptimizer.getKeyframes();
+    if (keyframes.length < 2) return;
+
+    // Find the keyframes that bracket the current time
+    const duration = this.loopOptimizer.getSettings().duration;
+    const normalizedTime = this.time / duration;
+    
+    let startIdx = 0;
+    let endIdx = 1;
+    
+    for (let i = 1; i < keyframes.length; i++) {
+      if (keyframes[i].time / duration > normalizedTime) {
+        endIdx = i;
+        startIdx = i - 1;
+        break;
+      }
+    }
+
+    const startFrame = keyframes[startIdx];
+    const endFrame = keyframes[endIdx];
+    const t = (normalizedTime - startFrame.time / duration) / 
+              (endFrame.time / duration - startFrame.time / duration);
+
+    // Apply interpolated transforms to all particles
+    this.particles.forEach(particle => {
+      // Interpolate position
+      particle.position.x = startFrame.position!.x + (endFrame.position!.x - startFrame.position!.x) * t;
+      particle.position.y = startFrame.position!.y + (endFrame.position!.y - startFrame.position!.y) * t;
+
+      // Interpolate scale
+      particle.scale = startFrame.scale!.x + (endFrame.scale!.x - startFrame.scale!.x) * t;
+
+      // Interpolate rotation
+      particle.rotation = startFrame.rotation! + (endFrame.rotation! - startFrame.rotation!) * t;
+
+      // Interpolate color
+      particle.color = {
+        r: startFrame.color!.r + (endFrame.color!.r - startFrame.color!.r) * t,
+        g: startFrame.color!.g + (endFrame.color!.g - startFrame.color!.g) * t,
+        b: startFrame.color!.b + (endFrame.color!.b - startFrame.color!.b) * t,
+        a: startFrame.color!.a + (endFrame.color!.a - startFrame.color!.a) * t
+      };
+
+      // Interpolate alpha
+      particle.alpha = startFrame.alpha! + (endFrame.alpha! - startFrame.alpha!) * t;
     });
   }
 
