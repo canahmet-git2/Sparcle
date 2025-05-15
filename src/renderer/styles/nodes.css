@@ -1,0 +1,240 @@
+.node {
+  background: #2a2a2a;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  color: #fff;
+  min-width: 200px;
+  max-width: 300px;
+}
+
+.node-header {
+  background: #3a3a3a;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  padding: 8px 12px;
+}
+
+.node-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.node-content {
+  padding: 12px;
+}
+
+/* Input styles */
+.number-input,
+.vector2-input,
+.color-input,
+.select-input {
+  margin-bottom: 12px;
+}
+
+.number-input label,
+.vector2-input label,
+.color-input label,
+.select-input label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
+  color: #ccc;
+}
+
+.number-input input,
+.select-input select {
+  width: 100%;
+  padding: 4px 8px;
+  background: #3a3a3a;
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+}
+
+.number-input input:focus,
+.select-input select:focus {
+  outline: none;
+  border-color: #6a6a6a;
+}
+
+/* Vector2 input */
+.vector2-fields {
+  display: flex;
+  gap: 8px;
+}
+
+.vector2-fields .number-input {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+/* Color input */
+.color-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.color-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid #4a4a4a;
+}
+
+.color-preview input[type="color"] {
+  width: 0;
+  height: 0;
+  padding: 0;
+  border: none;
+  visibility: hidden;
+}
+
+.color-picker {
+  position: absolute;
+  z-index: 1000;
+  background: #2a2a2a;
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  padding: 8px;
+  margin-top: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Behavior node */
+.behavior-item {
+  background: #3a3a3a;
+  border-radius: 4px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.behavior-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.remove-behavior-btn {
+  background: none;
+  border: none;
+  color: #ff4444;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+}
+
+.add-behavior-btn {
+  width: 100%;
+  background: #4a4a4a;
+  border: 1px solid #5a5a5a;
+  border-radius: 4px;
+  color: #fff;
+  padding: 6px;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.add-behavior-btn:hover {
+  background: #5a5a5a;
+}
+
+/* Input groups */
+.input-group {
+  margin-bottom: 8px;
+}
+
+.input-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #ccc;
+}
+
+.input-group input[type="checkbox"] {
+  margin: 0;
+}
+
+/* Property groups */
+.property-group {
+  background: #3a3a3a;
+  border-radius: 4px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+/* Keyframes */
+.keyframe {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.keyframe button {
+  background: none;
+  border: none;
+  color: #ff4444;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+/* Node types */
+.emitter-node .node-header {
+  background: #2d4d2d;
+}
+
+.force-field-node .node-header {
+  background: #4d2d2d;
+}
+
+.behavior-node .node-header {
+  background: #2d2d4d;
+}
+
+.renderer-node .node-header {
+  background: #4d4d2d;
+}
+
+/* Socket styles */
+.socket {
+  width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  background: #4a4a4a;
+  border: 2px solid #5a5a5a;
+  cursor: pointer;
+}
+
+.socket:hover {
+  border-color: #6a6a6a;
+}
+
+.socket.input {
+  margin-right: 8px;
+}
+
+.socket.output {
+  margin-left: 8px;
+}
+
+/* Connection styles */
+.connection {
+  stroke: #5a5a5a;
+  stroke-width: 2px;
+}
+
+.connection:hover {
+  stroke: #6a6a6a;
+  stroke-width: 3px;
+}
+
+/* Node selection */
+.node.selected {
+  box-shadow: 0 0 0 2px #5a5a5a;
+} 

@@ -1,0 +1,76 @@
+{
+  "name": "sparcle",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Specialized particle generator for Spine animations in slot games",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite --force",
+    "build": "tsc && vite build",
+    "build:nocheck": "tsc -p tsconfig.build.json && vite build",
+    "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
+    "electron:dev": "concurrently \"npm run dev\" \"npm run electron\"",
+    "electron": "wait-on tcp:8080 && electron .",
+    "package": "npm run build:nocheck && electron-builder build --win -c.extraMetadata.main=dist/main/index.js",
+    "make": "npm run build:nocheck && electron-builder build --win",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "build": {
+    "appId": "com.sparcle.app",
+    "productName": "Sparcle",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    }
+  },
+  "dependencies": {
+    "@pixi/particle-emitter": "^5.0.8",
+    "electron-is-dev": "^2.0.0",
+    "pixi.js": "^7.3.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "rete": "^2.0.2",
+    "rete-area-plugin": "^2.0.2",
+    "rete-connection-plugin": "^2.0.0",
+    "rete-react-plugin": "^2.0.0",
+    "rete-render-utils": "^2.0.0",
+    "styled-components": "^6.1.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/react": "^13.4.0",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.8.2",
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@vitejs/plugin-react": "^4.0.3",
+    "concurrently": "^8.2.1",
+    "electron": "^26.2.2",
+    "electron-builder": "^24.9.1",
+    "eslint": "^8.45.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.3",
+    "identity-obj-proxy": "^3.0.0",
+    "jest": "^29.5.0",
+    "jest-environment-jsdom": "^29.5.0",
+    "ts-jest": "^29.3.3",
+    "typescript": "^5.0.2",
+    "vite": "^4.4.5",
+    "vite-tsconfig-paths": "^5.1.4",
+    "wait-on": "^7.0.1"
+  }
+}
