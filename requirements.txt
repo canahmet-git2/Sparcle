@@ -1,2 +1,1 @@
-PyQt6
-PyQt6-WebEngine 
+kivy[full]>=2.1.0 # Or your desired Kivy version 
