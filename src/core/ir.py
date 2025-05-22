@@ -157,18 +157,30 @@ class EffectIR(EventDispatcher):
     def get_animated_param_value(self, emitter_id: str, param_name: str, time: float) -> Any:
         emitter = self.get_emitter(emitter_id)
         if not emitter:
+            print(f"DEBUG EffectIR: Emitter '{emitter_id}' not found")
             return None # Emitter not found
 
         base_value = emitter.get_param_value(param_name) # Get the non-animated base value as default
+        print(f"DEBUG EffectIR: Base value for '{emitter_id}/{param_name}': {base_value}")
 
         param_path = f"{emitter_id}/{param_name}"
+        print(f"DEBUG EffectIR: Looking for timeline path '{param_path}' at time {time:.2f}")
+        print(f"DEBUG EffectIR: Available timelines: {list(self.timelines.keys())}")
+        
         if param_path in self.timelines:
             animated_param = self.timelines[param_path]
+            print(f"DEBUG EffectIR: Found animated parameter with {len(animated_param.keyframes)} keyframes")
+            for i, kf in enumerate(animated_param.keyframes):
+                print(f"  Keyframe {i}: time={kf.time:.2f}, value={kf.value}")
+            
             # Ensure keyframes are sorted by time - ideally do this when keyframes are added/modified
             # For simplicity now, we might sort here or assume sorted.
             # animated_param.keyframes.sort(key=lambda kf: kf.time) # Costly if done every call
-            return animated_param.get_value_at_time(time, default_value=base_value)
+            result = animated_param.get_value_at_time(time, default_value=base_value)
+            print(f"DEBUG EffectIR: Animated value at T={time:.2f}: {result}")
+            return result
         
+        print(f"DEBUG EffectIR: No animation found for '{param_path}', returning base value: {base_value}")
         return base_value # No animation found for this parameter, return its base value
 
     def add_or_update_timeline(self, parameter_path: str, timeline: AnimatedParameter):

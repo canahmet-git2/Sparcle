@@ -1143,32 +1143,94 @@ class TimelinePanel(BoxLayout):
             self.bg_rect = Rectangle(size=self.size, pos=self.pos)
         self.bind(pos=self._update_rect, size=self._update_rect)
 
-        title_label = Label(text="Timeline / Dopesheet", size_hint_y=None, height=dp(25), bold=True)
-        self.add_widget(title_label)
-
-        # --- Control Bar (Time Label, Slider, and Key Buttons) ---
-        control_bar = BoxLayout(size_hint_y=None, height=dp(30), padding=(dp(5), 0), spacing=dp(5))
-        self.time_label = Label(text="T: 0.00s", size_hint_x=0.15, shorten=True)
-        control_bar.add_widget(self.time_label)
-
-        self.time_slider = Slider(min=0, max=1.0, value=0, step=0.01, size_hint_x=0.55)
-        control_bar.add_widget(self.time_slider)
+        # --- Timeline Section (like Spine with borders) ---
+        timeline_section = BoxLayout(orientation='vertical', size_hint_y=None, height=dp(60), padding=dp(2))
+        with timeline_section.canvas.before:
+            Color(rgba=get_color_from_hex('#3A3A3A'))  # Darker background
+            self.timeline_bg = Rectangle(size=timeline_section.size, pos=timeline_section.pos)
+            # Add border
+            Color(rgba=get_color_from_hex('#555555'))  # Border color
+            self.timeline_border = Line(rectangle=(timeline_section.x, timeline_section.y, timeline_section.width, timeline_section.height), width=1)
+        timeline_section.bind(pos=self._update_timeline_bg, size=self._update_timeline_bg)
         
-        # Auto Key Toggle Button
-        self.auto_key_button = Button(text="Auto Key: OFF", size_hint_x=0.15)
+        # Timeline Header
+        timeline_header = BoxLayout(size_hint_y=None, height=dp(20), padding=(dp(5), 0))
+        with timeline_header.canvas.before:
+            Color(rgba=get_color_from_hex('#2C2C2C'))  # Header background
+            self.timeline_header_bg = Rectangle(size=timeline_header.size, pos=timeline_header.pos)
+        timeline_header.bind(pos=self._update_timeline_header_bg, size=self._update_timeline_header_bg)
+        timeline_header.add_widget(Label(text="Timeline", bold=True, font_size='12sp'))
+        timeline_section.add_widget(timeline_header)
+        
+        # Timeline Controls
+        timeline_controls = BoxLayout(size_hint_y=None, height=dp(35), padding=(dp(5), 0), spacing=dp(3))
+        
+        # Transport Controls (fixed with proper text)
+        transport_layout = BoxLayout(size_hint_x=0.25, spacing=dp(2))
+        prev_key_btn = Button(text="|<<", size_hint_x=None, width=dp(35), font_size='10sp')  # Previous key
+        prev_frame_btn = Button(text="<", size_hint_x=None, width=dp(30), font_size='12sp')   # Previous frame
+        play_btn = Button(text="Play", size_hint_x=None, width=dp(40), font_size='10sp')      # Play/Pause
+        next_frame_btn = Button(text=">", size_hint_x=None, width=dp(30), font_size='12sp')   # Next frame
+        next_key_btn = Button(text=">>|", size_hint_x=None, width=dp(35), font_size='10sp')  # Next key
+        
+        transport_layout.add_widget(prev_key_btn)
+        transport_layout.add_widget(prev_frame_btn)
+        transport_layout.add_widget(play_btn)
+        transport_layout.add_widget(next_frame_btn)
+        transport_layout.add_widget(next_key_btn)
+        timeline_controls.add_widget(transport_layout)
+        
+        # Time Display
+        self.time_label = Label(text="0:00 (F0)", size_hint_x=0.15, bold=True, font_size='11sp')
+        timeline_controls.add_widget(self.time_label)
+
+        # Timeline Slider
+        self.time_slider = Slider(min=0, max=1.0, value=0, step=0.01, size_hint_x=0.4)
+        timeline_controls.add_widget(self.time_slider)
+        
+        # Keyframe Controls
+        key_controls = BoxLayout(size_hint_x=0.2, spacing=dp(3))
+        
+        # Auto Key Toggle Button (Spine-style)
+        self.auto_key_button = Button(text="Auto", size_hint_x=0.4, font_size='10sp')
         self.auto_key_button.bind(on_release=self.toggle_auto_key)
-        control_bar.add_widget(self.auto_key_button)
+        key_controls.add_widget(self.auto_key_button)
         
         # Manual Key Button
-        manual_key_button = Button(text="Key", size_hint_x=0.15)
+        manual_key_button = Button(text="Key", size_hint_x=0.3, font_size='10sp')
         manual_key_button.bind(on_release=self.create_manual_key)
-        control_bar.add_widget(manual_key_button)
+        key_controls.add_widget(manual_key_button)
         
-        self.add_widget(control_bar)
+        # Delete Key Button
+        delete_key_button = Button(text="Del", size_hint_x=0.3, font_size='10sp')
+        key_controls.add_widget(delete_key_button)
+        
+        timeline_controls.add_widget(key_controls)
+        timeline_section.add_widget(timeline_controls)
+        self.add_widget(timeline_section)
+        
+        # --- Dopesheet Section (separated like Spine) ---
+        dopesheet_section = BoxLayout(orientation='vertical', size_hint_y=None, height=dp(100), padding=dp(2))
+        with dopesheet_section.canvas.before:
+            Color(rgba=get_color_from_hex('#2A2A2A'))  # Different background color
+            self.dopesheet_bg = Rectangle(size=dopesheet_section.size, pos=dopesheet_section.pos)
+            # Add border
+            Color(rgba=get_color_from_hex('#555555'))  # Border color
+            self.dopesheet_border = Line(rectangle=(dopesheet_section.x, dopesheet_section.y, dopesheet_section.width, dopesheet_section.height), width=1)
+        dopesheet_section.bind(pos=self._update_dopesheet_bg, size=self._update_dopesheet_bg)
+        
+        # Dopesheet Header
+        dopesheet_header = BoxLayout(size_hint_y=None, height=dp(20), padding=(dp(5), 0))
+        with dopesheet_header.canvas.before:
+            Color(rgba=get_color_from_hex('#1C1C1C'))  # Header background
+            self.dopesheet_header_bg = Rectangle(size=dopesheet_header.size, pos=dopesheet_header.pos)
+        dopesheet_header.bind(pos=self._update_dopesheet_header_bg, size=self._update_dopesheet_header_bg)
+        dopesheet_header.add_widget(Label(text="Dopesheet", bold=True, font_size='12sp'))
+        dopesheet_section.add_widget(dopesheet_header)
 
-        # --- Main Horizontal Scroll View for Timeline Content ---
+                # --- Dopesheet Scrollable Content ---
         self.main_timeline_scroll = ScrollView(
-            size_hint_y=None, height=dp(30),
+            size_hint_y=None, height=dp(75),
             do_scroll_x=True, do_scroll_y=False,
             bar_width=dp(8), bar_color=get_color_from_hex('#666666'),
             bar_inactive_color=get_color_from_hex('#444444')
@@ -1187,7 +1249,7 @@ class TimelinePanel(BoxLayout):
         )
         # --- Widget for drawing Keyframe Tracks and Playhead ---
         self.keyframe_tracks_widget = Widget(
-            size_hint_y=None, height=dp(35)
+            size_hint_y=None, height=dp(50)  # Fit within dopesheet section
         )
         with self.keyframe_tracks_widget.canvas.before: # Background for keyframe area
             Color(rgba=get_color_from_hex('#282828'))
@@ -1199,9 +1261,8 @@ class TimelinePanel(BoxLayout):
         self.scrollable_content_layout.add_widget(self.frame_numbers_widget)
         self.scrollable_content_layout.add_widget(self.keyframe_tracks_widget)
         self.main_timeline_scroll.add_widget(self.scrollable_content_layout)
-        self.add_widget(self.main_timeline_scroll)
-
-        self.add_widget(Widget()) # Spacer to push timeline content up
+        dopesheet_section.add_widget(self.main_timeline_scroll)
+        self.add_widget(dopesheet_section)
 
         # Bindings
         app = App.get_running_app()
@@ -1243,44 +1304,18 @@ class TimelinePanel(BoxLayout):
                     # Add instruction to draw the label's texture
                     Rectangle(texture=lbl.texture, pos=lbl.pos, size=lbl.texture_size)
         
-        # Redraw Mock Keyframes on keyframe_tracks_widget
-        self.keyframe_tracks_widget.canvas.remove_group('mock_keyframes') # Clear previous keyframes
-        with self.keyframe_tracks_widget.canvas:
-            Color(rgba=get_color_from_hex('#FFA726')) # Amber color for keyframes
-            
-            # Get actual keyframes from EffectIR for the selected node
-            app = App.get_running_app()
-            if app and app.selected_node and hasattr(app, 'effect_ir') and app.effect_ir:
-                selected_node = app.selected_node
-                if hasattr(selected_node, 'node_id'):
-                    # Collect all keyframe times for this node
-                    keyframe_times = set()
-                    for timeline_path, animated_param in app.effect_ir.timelines.items():
-                        if timeline_path.startswith(f"{selected_node.node_id}/"):
-                            for keyframe in animated_param.keyframes:
-                                if 0 <= keyframe.time <= loop_duration:
-                                    keyframe_times.add(keyframe.time)
-                    
-                    # Draw keyframes
-                    for kt_s in keyframe_times:
-                        x_pos = kt_s * dp(120)
-                        key_y = self.keyframe_tracks_widget.height / 2 - dp(5) / 2 # Centered
-                        Ellipse(pos=(x_pos - dp(2.5), key_y), size=(dp(5), dp(5)), group='mock_keyframes')
-            else:
-                # Fallback: Show mock keyframes if no node selected or no EffectIR
-                key_times = [0.5, 1.2, 2.5] 
-                for kt_s in key_times:
-                    if kt_s <= loop_duration:
-                        x_pos = kt_s * dp(120)
-                        key_y = self.keyframe_tracks_widget.height / 2 - dp(5) / 2 # Centered
-                        Ellipse(pos=(x_pos - dp(2.5), key_y), size=(dp(5), dp(5)), group='mock_keyframes')
+        # Add frame numbers for artist reference
+        self.add_frame_numbers(loop_duration)
+        
+        # Draw keyframes using separate method for clarity
+        self._draw_keyframes(loop_duration)
         
         self.keyframe_tracks_widget.canvas.ask_update()
         self.frame_numbers_widget.canvas.ask_update()
         self.update_playhead_position(App.get_running_app().current_time if App.get_running_app() else 0)
 
     def on_app_current_time_change(self, instance, value):
-        self.time_label.text = f"T: {value:.2f}s"
+        # Time label is updated in update_playhead_position with frame numbers
         if abs(self.time_slider.value - value) > (self.time_slider.step or 0.01)/2: # Avoid feedback loop, consider step
             self.time_slider.value = value
         self.update_playhead_position(value)
@@ -1308,6 +1343,28 @@ class TimelinePanel(BoxLayout):
         self.frame_numbers_widget.width = self.scrollable_content_layout.width
         self.keyframe_area_bg_rect.size = (self.scrollable_content_layout.width, self.keyframe_tracks_widget.height)
 
+    def _update_timeline_bg(self, instance, value):
+        """Update timeline section background and border"""
+        self.timeline_bg.pos = instance.pos
+        self.timeline_bg.size = instance.size
+        self.timeline_border.rectangle = (instance.x, instance.y, instance.width, instance.height)
+
+    def _update_timeline_header_bg(self, instance, value):
+        """Update timeline header background"""
+        self.timeline_header_bg.pos = instance.pos
+        self.timeline_header_bg.size = instance.size
+
+    def _update_dopesheet_bg(self, instance, value):
+        """Update dopesheet section background and border"""
+        self.dopesheet_bg.pos = instance.pos
+        self.dopesheet_bg.size = instance.size
+        self.dopesheet_border.rectangle = (instance.x, instance.y, instance.width, instance.height)
+
+    def _update_dopesheet_header_bg(self, instance, value):
+        """Update dopesheet header background"""
+        self.dopesheet_header_bg.pos = instance.pos
+        self.dopesheet_header_bg.size = instance.size
+
     def update_playhead_position(self, current_time):
         app = App.get_running_app()
         loop_duration = 1.0 # Default if IR not ready
@@ -1325,7 +1382,13 @@ class TimelinePanel(BoxLayout):
             playhead_x_on_scrollable_content, 0,
             playhead_x_on_scrollable_content, self.keyframe_tracks_widget.height
         ]
-        # print(f"Playhead Time: {current_time:.2f}, X: {playhead_x_on_scrollable_content:.2f}, Duration: {loop_duration}, ScrollWidth: {self.scrollable_content_layout.width}")
+        
+        # Update time label with Spine-style format (seconds:frames)
+        fps = 24
+        seconds = int(current_time)
+        frames = int((current_time - seconds) * fps)
+        current_frame = int(current_time * fps)
+        self.time_label.text = f"{seconds}:{frames:02d} (F{current_frame})"
 
     def toggle_auto_key(self, instance):
         """Toggle Auto Key mode on/off"""
@@ -1333,13 +1396,13 @@ class TimelinePanel(BoxLayout):
         if app:
             app.auto_key_enabled = not app.auto_key_enabled
             if app.auto_key_enabled:
-                self.auto_key_button.text = "Auto Key: ON"
-                # Color the button to indicate it's active (red/orange)
-                self.auto_key_button.background_color = (1.0, 0.5, 0.2, 1.0)  # Orange
+                self.auto_key_button.text = "Auto"
+                # Spine-style active state (bright red)
+                self.auto_key_button.background_color = (1.0, 0.2, 0.2, 1.0)  # Bright Red like Spine
             else:
-                self.auto_key_button.text = "Auto Key: OFF"
+                self.auto_key_button.text = "Auto"
                 # Reset to default color
-                self.auto_key_button.background_color = (1, 1, 1, 1)  # Default
+                self.auto_key_button.background_color = (0.5, 0.5, 0.5, 1.0)  # Gray when off
             print(f"Auto Key {'enabled' if app.auto_key_enabled else 'disabled'}")
 
     def create_manual_key(self, instance):
@@ -1347,6 +1410,131 @@ class TimelinePanel(BoxLayout):
         app = App.get_running_app()
         if app:
             app.create_manual_keyframe()
+
+    def _draw_keyframes(self, loop_duration):
+        """Draw keyframes on the timeline for the currently selected node"""
+        # Clear existing keyframes
+        self.keyframe_tracks_widget.canvas.remove_group('keyframes')
+        
+        # Get keyframes from EffectIR for the selected node
+        app = App.get_running_app()
+        if not (app and app.selected_node and hasattr(app, 'effect_ir') and app.effect_ir):
+            return  # No keyframes to draw
+            
+        selected_node = app.selected_node
+        if not hasattr(selected_node, 'node_id'):
+            return
+            
+        # Collect all keyframe times and organize by parameter
+        keyframe_data = {}  # {param_name: [times...]}
+        for timeline_path, animated_param in app.effect_ir.timelines.items():
+            if timeline_path.startswith(f"{selected_node.node_id}/"):
+                param_name = timeline_path.split('/')[-1]  # Extract parameter name
+                keyframe_data[param_name] = []
+                for keyframe in animated_param.keyframes:
+                    if 0 <= keyframe.time <= loop_duration:
+                        keyframe_data[param_name].append(keyframe.time)
+        
+        if not keyframe_data:
+            return  # No keyframes to draw
+        
+        # Draw keyframes with Spine-like visualization
+        with self.keyframe_tracks_widget.canvas:
+            # Use different colors for different parameter types (more Spine-like colors)
+            param_colors = {
+                'emission_rate': get_color_from_hex('#00FF00'),    # Bright Green
+                'lifespan': get_color_from_hex('#0080FF'),         # Bright Blue  
+                'particle_color': get_color_from_hex('#FF8000'),   # Bright Orange
+                'initial_velocity': get_color_from_hex('#FF00FF'), # Magenta
+                'emitter_position': get_color_from_hex('#FF0000')  # Bright Red
+            }
+            
+            # Draw parameter tracks (like Spine's separate rows)
+            total_params = len(keyframe_data)
+            if total_params > 0:
+                track_height = self.keyframe_tracks_widget.height / max(total_params, 1)
+                
+                for i, (param_name, times) in enumerate(keyframe_data.items()):
+                    if not times:
+                        continue
+                    
+                    # Draw track background (subtle)
+                    track_y = i * track_height
+                    Color(rgba=get_color_from_hex('#333333'))
+                    Rectangle(pos=(0, track_y), size=(self.scrollable_content_layout.width, track_height), group='keyframes')
+                    
+                    # Choose color for this parameter
+                    color = param_colors.get(param_name, get_color_from_hex('#FFFF00'))  # Default yellow
+                    Color(rgba=color)
+                    
+                    for kt_s in times:
+                        x_pos = max(dp(5), kt_s * dp(120))  # Ensure keyframes are at least 5dp from left edge
+                        key_y = track_y + track_height / 2 - dp(6) / 2  # Center in track
+                        
+                        # Draw Spine-style diamond keyframes
+                        keyframe_size = dp(6)
+                        # Draw as small rectangle rotated 45 degrees (diamond shape)
+                        Rectangle(pos=(x_pos - keyframe_size/2, key_y), 
+                                size=(keyframe_size, keyframe_size), 
+                                group='keyframes')
+                
+                # Draw parameter labels (like Spine)
+                Color(rgba=get_color_from_hex('#CCCCCC'))
+                for i, param_name in enumerate(keyframe_data.keys()):
+                    track_y = i * track_height
+                    label_text = param_name.replace('_', ' ').title()
+                    # This would need a proper label implementation in a real scenario
+                    # For now, we'll rely on color coding
+                    
+            else:
+                # No keyframes - draw a single unified track
+                Color(rgba=get_color_from_hex('#666666'))
+                for param_name, times in keyframe_data.items():
+                    color = param_colors.get(param_name, get_color_from_hex('#FFFF00'))
+                    Color(rgba=color)
+                    
+                    for kt_s in times:
+                        x_pos = max(dp(5), kt_s * dp(120))  # Ensure visible
+                        key_y = self.keyframe_tracks_widget.height / 2 - dp(6) / 2
+                        
+                        keyframe_size = dp(6)
+                        Rectangle(pos=(x_pos - keyframe_size/2, key_y), 
+                                size=(keyframe_size, keyframe_size), 
+                                group='keyframes')
+        
+        print(f"Drew {sum(len(times) for times in keyframe_data.values())} keyframes for node '{selected_node.title}' ({selected_node.node_id})")
+
+    def refresh_keyframes(self):
+        """Force refresh of keyframe display"""
+        app = App.get_running_app()
+        if app and hasattr(app, 'effect_ir') and app.effect_ir:
+            loop_duration = app.effect_ir.loop_duration
+            self._draw_keyframes(loop_duration)
+            self.keyframe_tracks_widget.canvas.ask_update()
+            print("Timeline keyframes refreshed")
+
+    def add_frame_numbers(self, loop_duration):
+        """Add frame number labels to help artists understand timing"""
+        fps = 24  # Standard frame rate for reference
+        
+        with self.frame_numbers_widget.canvas:
+            Color(rgba=get_color_from_hex('#AAAAAA'))
+            
+            # Add frame numbers at key positions
+            num_frames = int(loop_duration * fps)
+            for frame in range(0, num_frames + 1, fps // 4):  # Every 6 frames at 24fps
+                time_s = frame / fps
+                if time_s > loop_duration:
+                    break
+                    
+                x_pos = time_s * dp(120)
+                
+                # Add small frame number label
+                frame_lbl = Label(text=f"F{frame}", font_size='8sp', size=(dp(30), dp(15)))
+                frame_lbl.texture_update()
+                frame_lbl.pos = (x_pos - frame_lbl.texture_size[0] / 2, dp(5))
+                frame_lbl.color = get_color_from_hex('#888888')
+                Rectangle(texture=frame_lbl.texture, pos=frame_lbl.pos, size=frame_lbl.texture_size)
 
 class SparcleApp(App):
     selected_node = ObjectProperty(None, allownone=True)
@@ -1462,6 +1650,8 @@ class SparcleApp(App):
             self.inspector_panel.observe_node(self.selected_node) # Update inspector
         if self.preview_window:
             self.preview_window.update_preview(self.selected_node) # Update preview on selection
+        if hasattr(self, 'timeline_panel'):
+            self.timeline_panel.refresh_keyframes() # Refresh timeline for new node
 
     def add_source_node(self, instance):
         source_node = SourceNode() # Create an instance of the specific SourceNode class
@@ -1500,9 +1690,16 @@ class SparcleApp(App):
     def notify_parameter_changed(self, changed_node, param_name):
         print(f"Node '{changed_node.title}' parameter '{param_name}' changed.")
         
-        # Auto Key: If auto key is enabled and we have a selected source node, create a keyframe
+        # Auto Key: If auto key is enabled and we have a selected source node, create a keyframe for ONLY the changed parameter
+        keyframe_created = False
         if self.auto_key_enabled and isinstance(changed_node, SourceNode):
             self.create_keyframe_for_parameter(changed_node, param_name)
+            keyframe_created = True
+            print(f"AUTO KEY: Created keyframe for '{param_name}' only (not all parameters)")
+        
+        # Show visual feedback for keyframe creation
+        if keyframe_created and hasattr(self, 'timeline_panel'):
+            self._show_keyframe_feedback(param_name)
         
         # Force clear particles for immediate color feedback
         if param_name == "particle_color" and self.preview_window and changed_node == self.selected_node:
@@ -1517,11 +1714,13 @@ class SparcleApp(App):
     def create_keyframe_for_parameter(self, node, param_name):
         """Create a keyframe at current_time for the given node parameter"""
         if not self.effect_ir:
+            print("ERROR: EffectIR not available for keyframe creation")
             return
             
         # Get current parameter value
         current_value = node.get_parameter_value(param_name)
         if current_value is None:
+            print(f"ERROR: Could not get value for parameter '{param_name}'")
             return
             
         # Create timeline path
@@ -1536,23 +1735,44 @@ class SparcleApp(App):
                 TimelineKeyframe(time=self.current_time, value=current_value)
             ])
             self.effect_ir.add_or_update_timeline(timeline_path, animated_param)
+            print(f"✓ KEYFRAME CREATED: New timeline '{timeline_path}' at T={self.current_time:.2f} with value {current_value}")
         else:
             # Add keyframe to existing AnimatedParameter
             from src.core.ir import TimelineKeyframe
             new_keyframe = TimelineKeyframe(time=self.current_time, value=current_value)
             
-            # Remove existing keyframe at this time if it exists
+            # Remove existing keyframe at this time if it exists (prevent duplicates)
+            existing_count = len(animated_param.keyframes)
             animated_param.keyframes = [kf for kf in animated_param.keyframes if abs(kf.time - self.current_time) > 0.001]
+            removed_count = existing_count - len(animated_param.keyframes)
             
             # Add new keyframe and re-sort
             animated_param.keyframes.append(new_keyframe)
             animated_param.keyframes.sort(key=lambda kf: kf.time)
+            
+            if removed_count > 0:
+                print(f"✓ KEYFRAME UPDATED: Replaced existing keyframe for '{timeline_path}' at T={self.current_time:.2f} with value {current_value}")
+            else:
+                print(f"✓ KEYFRAME CREATED: Added to timeline '{timeline_path}' at T={self.current_time:.2f} with value {current_value}")
         
-        print(f"Created keyframe for {timeline_path} at T={self.current_time:.2f} with value {current_value}")
-        
-        # Update timeline display
+        # Force immediate timeline refresh
         if hasattr(self, 'timeline_panel'):
-            self.timeline_panel._redraw_timeline_markings(self.effect_ir.loop_duration)
+            self.timeline_panel.refresh_keyframes()
+            print(f"Timeline refreshed - Total keyframes for this node: {self._count_node_keyframes(node.node_id)}")
+        
+        # Force preview update to show keyframe effect immediately
+        if self.preview_window and node == self.selected_node:
+            print(f"Forcing preview update after keyframe creation for '{param_name}'")
+            self.preview_window.update_preview(node)
+
+    def _count_node_keyframes(self, node_id):
+        """Count total keyframes for a given node (for debugging)"""
+        total = 0
+        if self.effect_ir:
+            for timeline_path, animated_param in self.effect_ir.timelines.items():
+                if timeline_path.startswith(f"{node_id}/"):
+                    total += len(animated_param.keyframes)
+        return total
 
     def create_manual_keyframe(self):
         """Manually create keyframes for all parameters of the selected node at current time"""
@@ -1565,6 +1785,34 @@ class SparcleApp(App):
             self.create_keyframe_for_parameter(self.selected_node, param.name)
         
         print(f"Created manual keyframes for all parameters of '{self.selected_node.title}' at T={self.current_time:.2f}")
+
+    def _show_keyframe_feedback(self, param_name):
+        """Show visual feedback when a keyframe is created"""
+        # Flash the timeline button briefly to indicate keyframe creation
+        if hasattr(self, 'timeline_panel') and hasattr(self.timeline_panel, 'auto_key_button'):
+            original_color = self.timeline_panel.auto_key_button.background_color
+            # Flash bright white for feedback (like Spine)
+            self.timeline_panel.auto_key_button.background_color = (1.0, 1.0, 1.0, 1.0)  # Bright white flash
+            
+            def reset_color(dt):
+                # Return to proper auto key state color
+                if self.auto_key_enabled:
+                    self.timeline_panel.auto_key_button.background_color = (1.0, 0.2, 0.2, 1.0)  # Red when on
+                else:
+                    self.timeline_panel.auto_key_button.background_color = (0.5, 0.5, 0.5, 1.0)  # Gray when off
+            
+            Clock.schedule_once(reset_color, 0.15)  # Reset after 150ms
+        
+        # Enhanced console feedback with parameter type info
+        param_colors = {
+            'emission_rate': '🟢',
+            'lifespan': '🔵', 
+            'particle_color': '🟠',
+            'initial_velocity': '🟣',
+            'emitter_position': '🔴'
+        }
+        color_icon = param_colors.get(param_name, '🟡')
+        print(f"{color_icon} AUTO KEY: Created '{param_name}' keyframe at T={self.current_time:.2f}s")
 
 if __name__ == '__main__':
     SparcleApp().run() 
