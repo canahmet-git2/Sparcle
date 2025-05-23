@@ -59,6 +59,9 @@ class Particle:
     # Sprite information
     sprite_definition_id: Optional[str] = None
 
+    # Behavior flags
+    orient_to_velocity: bool = False
+
     def update(self, dt: float):
         if not self.is_alive:
             return
@@ -80,6 +83,11 @@ class Particle:
         )
         # Update rotation
         self.rotation = (self.rotation + self.angular_velocity * dt) % 360
+
+        # Orient to velocity if flag is set
+        if self.orient_to_velocity:
+            if self.velocity[0] != 0 or self.velocity[1] != 0: # Check for non-zero velocity
+                self.rotation = math.degrees(math.atan2(self.velocity[1], self.velocity[0]))
 
         # Affect over lifetime
         if self.lifespan > 0: # Avoid division by zero if lifespan is 0
@@ -227,6 +235,9 @@ class ParticleSystem:
         # Fetch Sprite Definition ID
         p_sprite_definition_id = self._get_param_value_at_time("sprite_definition_id", current_time, None)
 
+        # Fetch Behavior Flags
+        p_orient_to_velocity = self._get_param_value_at_time("orient_to_velocity", current_time, False)
+
         particle = Particle(
             position=initial_pos,
             velocity=initial_vel,
@@ -242,7 +253,8 @@ class ParticleSystem:
             size_curve=p_size_curve if isinstance(p_size_curve, list) else None,
             opacity_curve=p_opacity_curve if isinstance(p_opacity_curve, list) else None,
             color_curve=p_color_curve if isinstance(p_color_curve, list) else None,
-            sprite_definition_id=p_sprite_definition_id if isinstance(p_sprite_definition_id, str) else None
+            sprite_definition_id=p_sprite_definition_id if isinstance(p_sprite_definition_id, str) else None,
+            orient_to_velocity=p_orient_to_velocity if isinstance(p_orient_to_velocity, bool) else False
         )
         self.particles.append(particle)
 
@@ -348,9 +360,10 @@ if __name__ == '__main__':
         "emitter_position": {"name": "emitter_position", "value": (300, 100)}, # px
         "size_range": {"name": "size_range", "value": (5.0, 10.0)}, # (ranged)
 
-        "rotation_range_deg": {"name": "rotation_range_deg", "value": (0.0, 360.0)},
-        "angular_velocity_range_dps": {"name": "angular_velocity_range_dps", "value": (-90.0, 90.0)},
+        "rotation_range_deg": {"name": "rotation_range_deg", "value": (0.0, 0.0)}, # Set to 0 if orient_to_velocity is true
+        "angular_velocity_range_dps": {"name": "angular_velocity_range_dps", "value": (0.0, 0.0)},# Set to 0 if orient_to_velocity is true
         "acceleration_vector": {"name": "acceleration_vector", "value": (0.0, -20.0)}, # Gentle downward gravity
+        "orient_to_velocity": {"name": "orient_to_velocity", "value": True}, # Enable orient to velocity
 
         # --- "Over Lifetime" Parameters ---
         "size_over_lifespan": {"name": "size_over_lifespan", "value": [
