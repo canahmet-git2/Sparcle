@@ -114,39 +114,76 @@ class ParticleSystem:
             return
 
         # Get initial properties from EmitterProperties, potentially animated via EffectIR
-        # Using current_time to fetch values that might be animated at the point of emission
         initial_pos = self._get_param_value_at_time("emitter_position", current_time, (0.0, 0.0))
-        initial_vel = self._get_param_value_at_time("initial_velocity", current_time, (random.uniform(-50, 50), random.uniform(50, 150)))
-        # Add spread/variation if defined
-        # angle_spread = self._get_param_value_at_time("velocity_angle_spread", current_time, 0.0) # degrees
-        # speed_variation = self._get_param_value_at_time("speed_variation_factor", current_time, 0.0) # 0 to 1
 
-        # if angle_spread > 0:
-        #     angle_offset = random.uniform(-angle_spread / 2, angle_spread / 2) * (math.pi / 180.0)
-        #     current_angle = math.atan2(initial_vel[1], initial_vel[0])
-        #     new_angle = current_angle + angle_offset
-        #     speed = math.sqrt(initial_vel[0]**2 + initial_vel[1]**2)
-        #     initial_vel = (speed * math.cos(new_angle), speed * math.sin(new_angle))
+        # Lifespan
+        lifespan_val = self._get_param_value_at_time("lifespan_range", current_time, None)
+        if isinstance(lifespan_val, tuple) and len(lifespan_val) == 2:
+            particle_lifespan = random.uniform(lifespan_val[0], lifespan_val[1])
+        else:
+            particle_lifespan = self._get_param_value_at_time("lifespan", current_time, 2.0)
+
+        # Velocity
+        direction_vec_val = self._get_param_value_at_time("initial_direction_vector", current_time, (0.0, 1.0)) # Default up
+        speed_range_val = self._get_param_value_at_time("speed_range", current_time, (50.0, 150.0))
+        emission_angle_range_deg_val = self._get_param_value_at_time("emission_angle_range_deg", current_time, (0.0, 0.0))
+
+        speed = random.uniform(speed_range_val[0], speed_range_val[1])
+        emission_angle_offset_deg = random.uniform(emission_angle_range_deg_val[0], emission_angle_range_deg_val[1])
         
-        # if speed_variation > 0:
-        #     speed_multiplier = random.uniform(1.0 - speed_variation, 1.0 + speed_variation)
-        #     initial_vel = (initial_vel[0] * speed_multiplier, initial_vel[1] * speed_multiplier)
+        # Normalize direction_vec_val
+        dir_x, dir_y = direction_vec_val
+        len_dir = math.sqrt(dir_x**2 + dir_y**2)
+        if len_dir == 0: # Avoid division by zero, default to (0,1) if zero vector
+            norm_dir_x, norm_dir_y = 0.0, 1.0
+        else:
+            norm_dir_x, norm_dir_y = dir_x / len_dir, dir_y / len_dir
+            
+        base_angle_rad = math.atan2(norm_dir_y, norm_dir_x)
+        final_angle_rad = base_angle_rad + math.radians(emission_angle_offset_deg)
+        
+        initial_vel = (
+            speed * math.cos(final_angle_rad),
+            speed * math.sin(final_angle_rad)
+        )
 
-
-        particle_lifespan = self._get_param_value_at_time("lifespan", current_time, 2.0)
+        # Size
+        size_val = self._get_param_value_at_time("size_range", current_time, None)
+        if isinstance(size_val, tuple) and len(size_val) == 2:
+            particle_size = random.uniform(size_val[0], size_val[1])
+        else:
+            particle_size = self._get_param_value_at_time("particle_size", current_time, 5.0)
+        
+        # Color (remains as is for now, could also be ranged or use gradients later)
         particle_color = self._get_param_value_at_time("particle_color", current_time, (1.0, 1.0, 1.0, 1.0))
-        particle_size = self._get_param_value_at_time("particle_size", current_time, 5.0)
-        
-        # TODO: Add more initial property variations based on emitter_properties
-        # e.g. position_offset_x, position_offset_y, velocity_spread_angle, etc.
+
+        # Rotation
+        rot_val = self._get_param_value_at_time("rotation_range_deg", current_time, None)
+        if isinstance(rot_val, tuple) and len(rot_val) == 2:
+            initial_rotation = random.uniform(rot_val[0], rot_val[1])
+        else:
+            initial_rotation = self._get_param_value_at_time("initial_rotation_deg", current_time, 0.0)
+
+        # Angular Velocity
+        ang_vel_val = self._get_param_value_at_time("angular_velocity_range_dps", current_time, None)
+        if isinstance(ang_vel_val, tuple) and len(ang_vel_val) == 2:
+            initial_angular_velocity = random.uniform(ang_vel_val[0], ang_vel_val[1])
+        else:
+            initial_angular_velocity = self._get_param_value_at_time("initial_angular_velocity_dps", current_time, 0.0)
+            
+        # Acceleration
+        particle_acceleration = self._get_param_value_at_time("acceleration_vector", current_time, (0.0, 0.0))
+
 
         particle = Particle(
             position=initial_pos,
             velocity=initial_vel,
+            acceleration=particle_acceleration,
             lifespan=particle_lifespan,
             color=particle_color,
-            size=particle_size
-            # acceleration can be an emitter property too
+            size=particle_size,
+            rotation=initial_rotation,
+            angular_velocity=initial_angular_velocity
         )
         self.particles.append(particle)
 
@@ -193,11 +230,20 @@ if __name__ == '__main__':
     # Define some base parameters for the emitter
     emitter_params_data = {
         "emission_rate": {"name": "emission_rate", "value": 50.0}, # particles per second
-        "lifespan": {"name": "lifespan", "value": 1.5}, # seconds
+        "lifespan_range": {"name": "lifespan_range", "value": (1.0, 2.5)}, # seconds (ranged)
         "particle_color": {"name": "particle_color", "value": (0.8, 0.2, 1.0, 0.8)}, # RGBA
-        "initial_velocity": {"name": "initial_velocity", "value": (0, 100)}, # px/sec
-        "emitter_position": {"name": "emitter_position", "value": (300, 200)}, # px
-        "particle_size": {"name": "particle_size", "value": 7.0}
+        
+        # Velocity related parameters
+        "initial_direction_vector": {"name": "initial_direction_vector", "value": (0, 1)}, # Base direction (up)
+        "speed_range": {"name": "speed_range", "value": (75.0, 125.0)}, # Speed in px/sec
+        "emission_angle_range_deg": {"name": "emission_angle_range_deg", "value": (-20.0, 20.0)}, # Emission cone 40 deg wide
+
+        "emitter_position": {"name": "emitter_position", "value": (300, 100)}, # px
+        "size_range": {"name": "size_range", "value": (3.0, 8.0)}, # (ranged)
+
+        "rotation_range_deg": {"name": "rotation_range_deg", "value": (0.0, 360.0)},
+        "angular_velocity_range_dps": {"name": "angular_velocity_range_dps", "value": (-45.0, 45.0)},
+        "acceleration_vector": {"name": "acceleration_vector", "value": (0.0, -30.0)} # Gentle downward gravity
     }
     
     # If using the actual ir.EmitterParameter, structure would be:
