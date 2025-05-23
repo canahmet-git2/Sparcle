@@ -48,6 +48,17 @@ class Particle:
     rotation: float = 0.0  # In degrees
     angular_velocity: float = 0.0 # In degrees per second
 
+    # Fields for "over lifetime" behavior
+    initial_size: float = 5.0 # Size at birth
+    initial_color: Tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0) # Color at birth
+
+    size_curve: Optional[List[Tuple[float, float]]] = None # List of (time_norm, size_multiplier)
+    opacity_curve: Optional[List[Tuple[float, float]]] = None # List of (time_norm, opacity_value)
+    color_curve: Optional[List[Tuple[float, Tuple[float, float, float, float]]]] = None # List of (time_norm, rgba_color)
+
+    # Sprite information
+    sprite_definition_id: Optional[str] = None
+
     def update(self, dt: float):
         if not self.is_alive:
             return
@@ -69,6 +80,39 @@ class Particle:
         )
         # Update rotation
         self.rotation = (self.rotation + self.angular_velocity * dt) % 360
+
+        # Affect over lifetime
+        if self.lifespan > 0: # Avoid division by zero if lifespan is 0
+            norm_age = min(1.0, max(0.0, self.age / self.lifespan))
+        else:
+            norm_age = 1.0 # Consider it at the end of its life if lifespan is zero
+
+        # Apply size curve (as multiplier to initial_size)
+        if self.size_curve:
+            current_size_multiplier = _interpolate_scalar_curve(self.size_curve, norm_age)
+            self.size = self.initial_size * current_size_multiplier
+        # else: self.size remains initial_size or set directly if no curve logic is used for size elsewhere
+
+        # Determine current base color (from color_curve or initial_color)
+        current_base_color_rgb = (self.initial_color[0], self.initial_color[1], self.initial_color[2])
+        current_base_alpha = self.initial_color[3]
+
+        if self.color_curve:
+            interpolated_color = _interpolate_color_curve(self.color_curve, norm_age)
+            current_base_color_rgb = (interpolated_color[0], interpolated_color[1], interpolated_color[2])
+            current_base_alpha = interpolated_color[3] # Color curve defines full RGBA
+        
+        # Apply opacity curve (modulates the alpha of the current_base_color)
+        if self.opacity_curve:
+            current_opacity = _interpolate_scalar_curve(self.opacity_curve, norm_age)
+            final_alpha = current_base_alpha * current_opacity # Modulate if color curve also had alpha
+                                                              # Or directly use current_opacity if that logic is preferred
+                                                              # For now, let opacity_curve be the dominant controller of final alpha if it exists.
+            final_alpha = current_opacity # Let opacity curve directly set final alpha if present
+        else:
+            final_alpha = current_base_alpha
+        
+        self.color = (current_base_color_rgb[0], current_base_color_rgb[1], current_base_color_rgb[2], final_alpha)
 
 
 class ParticleSystem:
@@ -122,6 +166,7 @@ class ParticleSystem:
             particle_lifespan = random.uniform(lifespan_val[0], lifespan_val[1])
         else:
             particle_lifespan = self._get_param_value_at_time("lifespan", current_time, 2.0)
+        particle_lifespan = max(0.001, particle_lifespan) # Ensure lifespan is positive
 
         # Velocity
         direction_vec_val = self._get_param_value_at_time("initial_direction_vector", current_time, (0.0, 1.0)) # Default up
@@ -147,15 +192,15 @@ class ParticleSystem:
             speed * math.sin(final_angle_rad)
         )
 
-        # Size
+        # Initial Size (base for size_over_lifespan curve)
         size_val = self._get_param_value_at_time("size_range", current_time, None)
         if isinstance(size_val, tuple) and len(size_val) == 2:
-            particle_size = random.uniform(size_val[0], size_val[1])
+            born_size = random.uniform(size_val[0], size_val[1])
         else:
-            particle_size = self._get_param_value_at_time("particle_size", current_time, 5.0)
+            born_size = self._get_param_value_at_time("particle_size", current_time, 5.0)
         
-        # Color (remains as is for now, could also be ranged or use gradients later)
-        particle_color = self._get_param_value_at_time("particle_color", current_time, (1.0, 1.0, 1.0, 1.0))
+        # Initial Color (base for color/opacity_over_lifespan curves)
+        born_color = self._get_param_value_at_time("particle_color", current_time, (1.0, 1.0, 1.0, 1.0))
 
         # Rotation
         rot_val = self._get_param_value_at_time("rotation_range_deg", current_time, None)
@@ -174,16 +219,30 @@ class ParticleSystem:
         # Acceleration
         particle_acceleration = self._get_param_value_at_time("acceleration_vector", current_time, (0.0, 0.0))
 
+        # Fetch "over lifetime" curve data
+        p_size_curve = self._get_param_value_at_time("size_over_lifespan", current_time, None)
+        p_opacity_curve = self._get_param_value_at_time("opacity_over_lifespan", current_time, None)
+        p_color_curve = self._get_param_value_at_time("color_over_lifespan", current_time, None)
+
+        # Fetch Sprite Definition ID
+        p_sprite_definition_id = self._get_param_value_at_time("sprite_definition_id", current_time, None)
 
         particle = Particle(
             position=initial_pos,
             velocity=initial_vel,
             acceleration=particle_acceleration,
             lifespan=particle_lifespan,
-            color=particle_color,
-            size=particle_size,
+            # color and size will be set by curves, using initial_color/initial_size as base
+            initial_color=born_color,
+            initial_size=born_size,
+            size=born_size, # Set initial effective size
+            color=born_color, # Set initial effective color
             rotation=initial_rotation,
-            angular_velocity=initial_angular_velocity
+            angular_velocity=initial_angular_velocity,
+            size_curve=p_size_curve if isinstance(p_size_curve, list) else None,
+            opacity_curve=p_opacity_curve if isinstance(p_opacity_curve, list) else None,
+            color_curve=p_color_curve if isinstance(p_color_curve, list) else None,
+            sprite_definition_id=p_sprite_definition_id if isinstance(p_sprite_definition_id, str) else None
         )
         self.particles.append(particle)
 
@@ -220,6 +279,53 @@ class ParticleSystem:
     def __repr__(self):
         return f"<ParticleSystem emitter_id='{self.emitter_id}' particles={len(self.particles)} alive={len(self.get_alive_particles())}>"
 
+# --- Interpolation Helper Functions ---
+
+def _interpolate_scalar_curve(curve_points: List[Tuple[float, float]], normalized_time: float) -> float:
+    if not curve_points:
+        return 1.0 # Default to 1.0 (no change) if no curve
+
+    curve_points.sort(key=lambda p: p[0]) # Ensure sorted by time
+
+    if normalized_time <= curve_points[0][0]:
+        return curve_points[0][1]
+    if normalized_time >= curve_points[-1][0]:
+        return curve_points[-1][1]
+
+    for i in range(len(curve_points) - 1):
+        p1 = curve_points[i]
+        p2 = curve_points[i+1]
+        if p1[0] <= normalized_time < p2[0]:
+            if p2[0] == p1[0]: # Avoid division by zero if times are identical
+                return p1[1]
+            t_ratio = (normalized_time - p1[0]) / (p2[0] - p1[0])
+            return p1[1] + (p2[1] - p1[1]) * t_ratio
+    
+    return curve_points[-1][1] # Should ideally be caught by checks above
+
+def _interpolate_color_curve(curve_points: List[Tuple[float, Tuple[float,float,float,float]]], normalized_time: float) -> Tuple[float,float,float,float]:
+    if not curve_points:
+        return (1.0, 1.0, 1.0, 1.0) # Default to white if no curve
+
+    curve_points.sort(key=lambda p: p[0]) # Ensure sorted by time
+
+    if normalized_time <= curve_points[0][0]:
+        return curve_points[0][1]
+    if normalized_time >= curve_points[-1][0]:
+        return curve_points[-1][1]
+
+    for i in range(len(curve_points) - 1):
+        p1_time, p1_color = curve_points[i]
+        p2_time, p2_color = curve_points[i+1]
+        if p1_time <= normalized_time < p2_time:
+            if p2_time == p1_time: # Avoid division by zero
+                return p1_color
+            t_ratio = (normalized_time - p1_time) / (p2_time - p1_time)
+            interpolated_rgba = tuple(c1 + (c2 - c1) * t_ratio for c1, c2 in zip(p1_color, p2_color))
+            return interpolated_rgba # type: ignore
+            
+    return curve_points[-1][1] # Should ideally be caught by checks above
+
 if __name__ == '__main__':
     print("Running Particle System Demo...")
 
@@ -230,20 +336,40 @@ if __name__ == '__main__':
     # Define some base parameters for the emitter
     emitter_params_data = {
         "emission_rate": {"name": "emission_rate", "value": 50.0}, # particles per second
-        "lifespan_range": {"name": "lifespan_range", "value": (1.0, 2.5)}, # seconds (ranged)
-        "particle_color": {"name": "particle_color", "value": (0.8, 0.2, 1.0, 0.8)}, # RGBA
+        "lifespan_range": {"name": "lifespan_range", "value": (1.5, 3.0)}, # seconds (ranged)
+        "particle_color": {"name": "particle_color", "value": (1.0, 0.5, 0.0, 0.8)}, # Initial base color (e.g. orange, semi-transparent)
+        "sprite_definition_id": {"name": "sprite_definition_id", "value": "spark_01"}, # Link to a sprite definition
         
         # Velocity related parameters
         "initial_direction_vector": {"name": "initial_direction_vector", "value": (0, 1)}, # Base direction (up)
-        "speed_range": {"name": "speed_range", "value": (75.0, 125.0)}, # Speed in px/sec
-        "emission_angle_range_deg": {"name": "emission_angle_range_deg", "value": (-20.0, 20.0)}, # Emission cone 40 deg wide
+        "speed_range": {"name": "speed_range", "value": (50.0, 100.0)}, # Speed in px/sec
+        "emission_angle_range_deg": {"name": "emission_angle_range_deg", "value": (-30.0, 30.0)}, # Emission cone 60 deg wide
 
         "emitter_position": {"name": "emitter_position", "value": (300, 100)}, # px
-        "size_range": {"name": "size_range", "value": (3.0, 8.0)}, # (ranged)
+        "size_range": {"name": "size_range", "value": (5.0, 10.0)}, # (ranged)
 
         "rotation_range_deg": {"name": "rotation_range_deg", "value": (0.0, 360.0)},
-        "angular_velocity_range_dps": {"name": "angular_velocity_range_dps", "value": (-45.0, 45.0)},
-        "acceleration_vector": {"name": "acceleration_vector", "value": (0.0, -30.0)} # Gentle downward gravity
+        "angular_velocity_range_dps": {"name": "angular_velocity_range_dps", "value": (-90.0, 90.0)},
+        "acceleration_vector": {"name": "acceleration_vector", "value": (0.0, -20.0)}, # Gentle downward gravity
+
+        # --- "Over Lifetime" Parameters ---
+        "size_over_lifespan": {"name": "size_over_lifespan", "value": [
+            (0.0, 0.2), # At birth, 20% of initial_size
+            (0.1, 1.0), # Quickly grow to full initial_size
+            (0.7, 0.8), # Slowly shrink
+            (1.0, 0.0)  # Disappear at end of life
+        ]},
+        "opacity_over_lifespan": {"name": "opacity_over_lifespan", "value": [
+            (0.0, 0.0), # Fully transparent at birth
+            (0.1, 1.0), # Fade in quickly
+            (0.8, 1.0), # Stay opaque
+            (1.0, 0.0)  # Fade out at end of life
+        ]},
+        "color_over_lifespan": {"name": "color_over_lifespan", "value": [
+            (0.0, (1.0, 0.0, 0.0, 1.0)), # Red
+            (0.5, (1.0, 1.0, 0.0, 1.0)), # Yellow
+            (1.0, (0.0, 0.0, 1.0, 0.5))  # Blue, semi-transparent (but opacity_curve may override alpha)
+        ]}
     }
     
     # If using the actual ir.EmitterParameter, structure would be:
@@ -297,7 +423,7 @@ if __name__ == '__main__':
         # Example of accessing particle data (e.g., for rendering)
         # if alive_count > 0 and (int(current_time / dt) % 60 == 0):
         #     first_particle = ps.get_alive_particles()[0]
-        #     print(f"  First particle sample: Pos={first_particle.position}, Age={first_particle.age:.2f}, Color={first_particle.color}")
+        #     print(f"  First particle sample: Pos={first_particle.position}, Age={first_particle.age:.2f}, Color={first_particle.color}, Size={first_particle.size:.2f}, SpriteID={first_particle.sprite_definition_id}")
 
         current_time += dt
         if not ps.emitter_properties and not isinstance(mock_ir, EffectIRPlaceholder) and current_time > dt*5 : # Break early if no props after a few steps

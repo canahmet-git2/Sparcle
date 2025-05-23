@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 from kivy.event import EventDispatcher # Import EventDispatcher
 from kivy.properties import NumericProperty, ObjectProperty, DictProperty # Added DictProperty
 
@@ -127,6 +127,26 @@ class AnimatedParameter:
         return default_value # Should not be reached if logic above is correct
 
 
+@dataclass
+class SpriteAsset:
+    asset_id: str # Unique ID for this asset, e.g., "atlas_01"
+    path: str     # File path to the image, e.g., "assets/particles.png"
+    width: int    # Width of the image in pixels
+    height: int   # Height of the image in pixels
+
+@dataclass
+class SpriteDefinition:
+    definition_id: str # Unique ID for this sprite definition, e.g., "sparkle_frame_01"
+    asset_id: str      # ID of the SpriteAsset this definition belongs to
+    # UV coordinates defining the region within the asset image
+    # (x, y, width, height) in pixels, from top-left of the asset image
+    region: Tuple[int, int, int, int] 
+    # Optional: pivot point (normalized, 0-1 relative to region, default center)
+    pivot: Tuple[float, float] = (0.5, 0.5) 
+    # Optional: name for easier lookup in editor, if different from definition_id
+    name: Optional[str] = None 
+
+
 class EffectIR(EventDispatcher):
     version = ObjectProperty("0.1.0") # Can be ObjectProperty for strings/other objects
     loop_duration = NumericProperty(5.0) # Use Kivy NumericProperty
@@ -138,10 +158,16 @@ class EffectIR(EventDispatcher):
     # Key: parameter_path (e.g., "emitter_id/param_name"), Value: AnimatedParameter instance
     timelines = DictProperty({}) 
 
+    emitters: List[EmitterProperties] = field(default_factory=list) # Made this a field for clarity
+    sprite_assets: List[SpriteAsset] = field(default_factory=list)
+    sprite_definitions: Dict[str, SpriteDefinition] = field(default_factory=dict)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs) # Call EventDispatcher constructor
-        self.emitters: List[EmitterProperties] = [] # Initialize as plain list for now
-        # self.timelines: Dict[str, AnimatedParameter] = {} # If needed
+        self.emitters = [] # Initialize as plain list for now
+        self.timelines = {} # Re-initialize if not relying on DictProperty solely for init
+        self.sprite_assets = []
+        self.sprite_definitions = {}
 
     def add_emitter(self, emitter_props: EmitterProperties):
         self.emitters.append(emitter_props)
@@ -184,10 +210,35 @@ class EffectIR(EventDispatcher):
         return base_value # No animation found for this parameter, return its base value
 
     def add_or_update_timeline(self, parameter_path: str, timeline: AnimatedParameter):
-        timeline.sort_keyframes() # Ensure timeline is sorted when added/updated
+        timeline.sort_keyframes()
         self.timelines[parameter_path] = timeline
         # This should trigger Kivy bindings if anything is bound to the timelines DictProperty directly
         # or to specific keys if Kivy supports that deeply.
+
+    def add_sprite_asset(self, asset: SpriteAsset):
+        # Check for duplicate asset_id if necessary
+        if any(sa.asset_id == asset.asset_id for sa in self.sprite_assets):
+            print(f"Warning: SpriteAsset with id '{asset.asset_id}' already exists. Overwriting not implemented.")
+            return # Or raise error, or update
+        self.sprite_assets.append(asset)
+
+    def get_sprite_asset(self, asset_id: str) -> Optional[SpriteAsset]:
+        for asset in self.sprite_assets:
+            if asset.asset_id == asset_id:
+                return asset
+        return None
+
+    def add_sprite_definition(self, definition: SpriteDefinition):
+        if definition.definition_id in self.sprite_definitions:
+            print(f"Warning: SpriteDefinition with id '{definition.definition_id}' already exists. Overwriting.")
+        # Optionally, verify that definition.asset_id refers to an existing SpriteAsset
+        if not self.get_sprite_asset(definition.asset_id):
+            print(f"Error: Cannot add SpriteDefinition '{definition.definition_id}'. Asset '{definition.asset_id}' not found.")
+            return
+        self.sprite_definitions[definition.definition_id] = definition
+
+    def get_sprite_definition(self, definition_id: str) -> Optional[SpriteDefinition]:
+        return self.sprite_definitions.get(definition_id)
 
 # Example Usage would remain similar, but instantiation of EffectIR is now of an EventDispatcher
 if __name__ == '__main__':
@@ -238,3 +289,35 @@ if __name__ == '__main__':
         animated_rate = ir.get_animated_param_value("source01", "emission_rate", time=t)
         lifespan = ir.get_animated_param_value("source01", "lifespan", time=t) # Should return base value
         print(f"Time: {t:.1f}s, Animated Emission Rate: {animated_rate}, Lifespan: {lifespan}") 
+
+    # --- Sprite Asset and Definition Example ---
+    print("\n--- Sprite Asset Demo ---")
+    asset1 = SpriteAsset(asset_id="particle_atlas_01", path="textures/particles.png", width=1024, height=1024)
+    ir.add_sprite_asset(asset1)
+    print(f"Added asset: {ir.get_sprite_asset('particle_atlas_01')}")
+
+    spark_def = SpriteDefinition(
+        definition_id="spark_white_01", 
+        asset_id="particle_atlas_01", 
+        region=(0, 0, 64, 64), # x,y,w,h from top-left of particle_atlas_01
+        name="White Spark"
+    )
+    smoke_def = SpriteDefinition(
+        definition_id="smoke_puff_01", 
+        asset_id="particle_atlas_01", 
+        region=(64, 0, 128, 128),
+        pivot=(0.5, 0.7) # Pivot towards bottom center for smoke rising
+    )
+    ir.add_sprite_definition(spark_def)
+    ir.add_sprite_definition(smoke_def)
+
+    # Test get
+    retrieved_spark = ir.get_sprite_definition("spark_white_01")
+    print(f"Retrieved spark: {retrieved_spark}")
+    if retrieved_spark:
+        print(f"  Spark belongs to asset: {retrieved_spark.asset_id}")
+
+    # Test adding definition for non-existent asset
+    bad_def = SpriteDefinition(definition_id="bad_one", asset_id="non_existent_atlas", region=(0,0,10,10))
+    ir.add_sprite_definition(bad_def) # Should print an error
+    print(f"Attempted to add bad_def, current defs: {list(ir.sprite_definitions.keys())}") 
