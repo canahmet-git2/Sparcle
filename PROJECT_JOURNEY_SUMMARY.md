@@ -71,3 +71,33 @@ This phase involved significant troubleshooting:
 *   Code changes for Sprint 4 and subsequent fixes remained uncommitted.
 *   Persistent issues with the tool's terminal not recognizing `npm`/`node` commands correctly, despite them working in the user's local terminal.
 *   The decision was made to revert to the "Sprint 3" commit (`6acd65c`) and explore a Python-based approach. 
+
+## Pivot to Python/Kivy and Restarting Sprint Cycle
+
+Following the challenges with the JavaScript-based stack and the decision to explore a Python-based solution, the project pivoted to using Python with the Kivy framework. This change aligns with the `sparcleflowchart.ini`'s alternative tech stack proposal.
+
+*   **New Technology Stack Focus:** Python, Kivy.
+*   **Project Reset:** Development effectively restarted, adhering to the Kivy-focused sprint plan outlined in `sparcleflowchart.ini`.
+
+### Sprint 1 (Kivy Foundation & Core UI Shell) - Python
+*   **Status:** COMPLETE
+*   **Key Activities:**
+    *   Set up the Kivy project structure.
+    *   Designed the main window layout with placeholders for Node Editor, Timeline, Parameters Panel, and Preview area. (Conceptual, code for placeholders established).
+    *   Implemented a basic Kivy App structure (`main.py`, `src/app/main_app.py`).
+    *   Created UI placeholder widgets in `src/ui/` for different sections of the application.
+    *   Basic menu bar (conceptual, placeholder in Kivy structure).
+    *   Research into Kivy node editor and timeline solutions indicated a preference for custom implementations or heavily adapted garden components.
+    *   Initial version of the **Effect IR** (`src/core/ir.py`) was developed, including `EmitterProperties`, `AnimatedParameter`, `TimelineKeyframe`, and `EffectIR` (as an `EventDispatcher`). This handles basic parameter storage, animation data structures, and value retrieval at specific times, including interpolation.
+
+### Sprint 2 (Node Editor - Phase 1 - Basic Functionality) - Python
+*   **Status:** IN PROGRESS
+*   **Current Focus:** Defining Python class structures for nodes (`src/core/nodes.py`) and parameters (partially addressed in `ir.py`).
+    *   Task 2.1: Implement basic node creation (e.g., Source, Display nodes).
+    *   Task 2.4: Define Python class structure for nodes/parameters.
+*   **Next Steps:**
+    *   Node dragging & selection (Task 2.2).
+    *   Basic connection drawing (sockets) (Task 2.3).
+
+---
+*Last Updated: (Current Date)* 
