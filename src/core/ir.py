@@ -30,6 +30,7 @@ class EmitterProperties:
     emitter_type: str # e.g., "PointEmitter", "LineEmitter" - for future expansion
     name: str = "Default Emitter"
     parameters: Dict[str, EmitterParameter] = field(default_factory=dict)
+    blending_mode: str = "alpha" # "alpha" for traditional, "additive" for bright effects
     # Example parameters that a source node might manage:
     # emission_rate: float = 10.0
     # lifespan: float = 2.0
@@ -255,7 +256,8 @@ if __name__ == '__main__':
             "particle_color": EmitterParameter(name="particle_color", value=(0.2, 0.8, 1.0, 1.0)),
             "initial_velocity": EmitterParameter(name="initial_velocity", value=(0, 50)),
             "emitter_position": EmitterParameter(name="emitter_position", value=(10, -5))
-        }
+        },
+        blending_mode="additive" # Example of setting it
     )
     ir.add_emitter(source_emitter_props)
     print(f"IR loop duration: {ir.loop_duration}")
